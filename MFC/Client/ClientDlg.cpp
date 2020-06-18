@@ -121,6 +121,9 @@ BOOL CClientDlg::OnInitDialog()
 	// TODO: Add extra initialization here
 	// Gan IP mac dinh cho edit box
 	GetDlgItem(EDIT_IP)->SetWindowTextW(_T("127.0.0.1"));
+	GetDlgItem(BTN_LOGOUT)->EnableWindow(false);
+	GetDlgItem(BTN_SEND)->EnableWindow(false);
+	GetDlgItem(BTN_FILE)->EnableWindow(false);
 
 	return TRUE;  // return TRUE  unless you set the focus to a control
 }
@@ -466,7 +469,12 @@ void CClientDlg::OnBnClickedSend()
 void CClientDlg::OnLbnDblclkOnluser()
 {
 	lst_onluser.GetText(lst_onluser.GetCurSel(), strItemSelected);
-	MessageBox(strItemSelected);
+	CString text = _T("Ban muon gui tin nhan rieng cho ") + strItemSelected + _T("?");
+	INT_PTR i = MessageBox(text, _T("Confirm"), MB_OKCANCEL);
+	if (i == IDCANCEL)
+		return;
+	
+
 }
 
 
@@ -501,4 +509,21 @@ void CClientDlg::OnBnClickedLogout()
 	closesocket(sClient);
 
 	UpdateData(false);
+}
+
+
+void CClientDlg::PostNcDestroy()
+{
+	// TODO: Add your specialized code here and/or call the base class
+	CDialogEx::PostNcDestroy();
+
+	// Dong ket noi
+	closesocket(sClient);
+}
+
+
+void CClientDlg::OnCancel()
+{
+	// TODO: Add your specialized code here and/or call the base class
+	DestroyWindow();
 }

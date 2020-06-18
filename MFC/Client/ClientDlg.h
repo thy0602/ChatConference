@@ -72,4 +72,6 @@ public:
 	afx_msg void OnLbnDblclkOnluser();
 	CString strItemSelected;
 	afx_msg void OnBnClickedLogout();
+	virtual void PostNcDestroy();
+	virtual void OnCancel();
 };

@@ -13,8 +13,8 @@
 #define EDIT_MSG                        1003
 #define BTN_LOGIN                       1004
 #define EDIT_USER                       1005
-#define EDIT_IP                         1006
-#define EDIT_PASS                       1007
+#define EDIT_PASS                       1006
+#define EDIT_IP                         1007
 #define BTN_SIGNUP                      1008
 #define BTN_LOGOUT                      1009
 #define BTN_CONNECT                     1010

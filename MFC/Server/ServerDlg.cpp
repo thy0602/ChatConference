@@ -452,5 +452,19 @@ void CServerDlg::OnBnClickedExit()
 		delete pSock[i];
 	}
 
-	OnCancel();
+	CDialogEx::OnCancel();
+}
+
+
+void CServerDlg::OnCancel()
+{
+	// TODO: Add your specialized code here and/or call the base class
+	// Xoa pSocket
+	for (int i = 0; i < pSock.size(); i++)
+	{
+		closesocket(pSock[i]->sockClient);
+		delete pSock[i];
+	}
+
+	CDialogEx::OnCancel();
 }

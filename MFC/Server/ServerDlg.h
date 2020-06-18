@@ -72,4 +72,6 @@ public:
 	afx_msg void OnBnClickedListen();
 	CListBox lst_event;
 	afx_msg void OnBnClickedExit();
+//	virtual void OnCancel();
+	virtual void OnCancel();
 };
