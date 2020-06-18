@@ -1,4 +1,4 @@
-
+﻿
 // ClientDlg.h : header file
 //
 
@@ -12,6 +12,11 @@
 #include <vector>
 using namespace std;
 
+#define FLAG_SIGNUP 1
+#define FLAG_LOGIN 2
+#define FLAG_CHAT_PUBLIC 3
+#define FLAG_LOGOUT 5
+#define FLAG_DEL_ONLUSER 6
 
 // CClientDlg dialog
 class CClientDlg : public CDialogEx
@@ -40,9 +45,10 @@ protected:
 	afx_msg HCURSOR OnQueryDragIcon();
 	DECLARE_MESSAGE_MAP()
 public:
+	/*Biến*/
 	SOCKET sClient;
 	sockaddr_in servAdd;
-	CString Command;
+	//CString Command;
 	int flag;
 
 	LRESULT SockMsg(WPARAM wParam, LPARAM lParam);
@@ -55,11 +61,15 @@ public:
 
 	afx_msg void OnLbnSelchangeChat();
 	afx_msg void OnBnClickedLogin();
+	afx_msg void OnBnClickedSignup();
+	afx_msg void OnBnClickedSend();	// gui tin nhan public
 	CString IP;
 	CString username;
 	CString password;
-	afx_msg void OnBnClickedSignup();
+	CString chatMessage;	// noi dung chat public muon gui di
+	CListBox lstBoxChat;		// noi chung phong chat public
 	CListBox lst_onluser;
 	afx_msg void OnLbnDblclkOnluser();
 	CString strItemSelected;
+	afx_msg void OnBnClickedLogout();
 };

@@ -17,7 +17,6 @@
 #define EDIT_PASS                       1007
 #define BTN_SIGNUP                      1008
 #define BTN_LOGOUT                      1009
-#define BTN_SIGNUP2                     1010
 #define BTN_CONNECT                     1010
 #define LST_ONLUSER                     1011
 

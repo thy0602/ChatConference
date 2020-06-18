@@ -74,6 +74,7 @@ BEGIN_MESSAGE_MAP(CServerDlg, CDialogEx)
 	// Add manually
 	ON_MESSAGE(WM_SOCKET, SockMsg)
 	ON_BN_CLICKED(BTN_LISTEN, &CServerDlg::OnBnClickedListen)
+	ON_BN_CLICKED(BTN_EXIT, &CServerDlg::OnBnClickedExit)
 END_MESSAGE_MAP()
 
 
@@ -172,7 +173,6 @@ void CAboutDlg::OnBnClickedListen()
 
 LRESULT CServerDlg::SockMsg(WPARAM wParam, LPARAM lParam)
 {
-	string res[2];
 	ifstream is;
 	ofstream os;
 
@@ -197,22 +197,28 @@ LRESULT CServerDlg::SockMsg(WPARAM wParam, LPARAM lParam)
 		case FD_READ: {
 			// Update gia tri tu code len giao dien
 			UpdateData(FALSE);
+
+			// Tim socket da gui goi tin (trong ds socket luu trong vector pSock)
 			int pos = -1;
 			for (int i = 0; i < pSock.size(); i++) {
 				if (pSock[i]->sockClient == wParam) {
 					pos = i;
 				}
 			}
-
+			
+			// Lay noi dung goi tin client da gui
 			CString temp;
 			if (mRecv(wParam, temp) < 0)
 				break;
 
+			// Tach flag va content trong goi tin nhan duoc
 			vector<string> res = Split(temp);
-			int flag = stoi(res[0]); //Chuyển chuỗi thành số
+			int flag = stoi(res[0]);	//Chuyển chuỗi thành số
+			
+			// Kiem tra flag va thuc hien xu li chuc nang tuong ung
 			string username, pass, recvUser, recvPass;
 			switch (flag) {
-				case 1: { //Sign up
+				case FLAG_SIGNUP: { //Sign up
 					recvUser = res[1];
 					recvPass = res[2];
 
@@ -248,7 +254,7 @@ LRESULT CServerDlg::SockMsg(WPARAM wParam, LPARAM lParam)
 					pSock.pop_back();
 					break;
 				}
-				case 2: { // Login
+				case FLAG_LOGIN: { // Login
 					recvUser = res[1];
 					recvPass = res[2];
 
@@ -299,7 +305,65 @@ LRESULT CServerDlg::SockMsg(WPARAM wParam, LPARAM lParam)
 
 					break;
 				}
+				case FLAG_CHAT_PUBLIC: { // Chat public
+					// res[0]: flag
+					// res[1]: username (ten cua client da gui chatMessage)
+					// res[2]: chatMessage
+
+					// Hien thi noi dung chat len list event cua server
+					string chatText = res[1] + ": " + res[2]; // format: "Sender: message"
+					lst_event.AddString(CString(chatText.c_str()));
+					UpdateData(false);
+					
+					// Gui noi dung chat cho cac client con lai
+					string commandTemp = "3\r\n" + res[1] + "\r\n" + res[2];
+					CString command = CString((commandTemp.c_str()));
+					for (int i = 0; i < pSock.size(); i++)
+					{
+						// pos la vi tri cua socket (trong vector pSock) da gui chat public
+						if (i != pos)
+						{
+							mSend(pSock[i]->sockClient, command);
+						}
+					}
+					break;
+				}
 			}
+			break;
+		}
+		case FD_CLOSE: {
+			// Tim socket da dong ket noi (trong ds socket luu trong vector pSock)
+			int pos = -1;
+			for (int i = 0; i < pSock.size(); i++) {
+				if (pSock[i]->sockClient == wParam) {
+					pos = i;
+				}
+			}
+
+			// Hien thong bao user log out len list event cua server
+			string text = pSock[pos]->Name + " logout";
+			lst_event.AddString(CString(text.c_str()));
+
+			// Gui goi tin cho cac client con lai de xoa ten user ra khoi ds online user
+			string commandTemp = "5\r\n" + pSock[pos]->Name;
+			CString command = CString((commandTemp.c_str()));
+			for (int i = 0; i < pSock.size(); i++)
+			{
+				// pos la vi tri cua socket (trong vector pSock) da gui chat public
+				if (i != pos)
+				{
+					mSend(pSock[i]->sockClient, command);
+				}
+			}
+
+			// Dong ket noi
+			closesocket(wParam);
+
+			// Xoa socket ra khoi pSock
+			delete pSock[pos];
+			pSock.erase(pSock.begin() + pos);
+
+			UpdateData(false);
 			break;
 		}
 		default:
@@ -307,6 +371,20 @@ LRESULT CServerDlg::SockMsg(WPARAM wParam, LPARAM lParam)
 	}
 	return 0;
 }
+
+void CServerDlg::mSend(SOCKET sk, CString Command)
+{
+	//MessageBox(_T("Da gui du lieu cho client"));
+	int Len = Command.GetLength();
+	Len += Len;
+	PBYTE sendBuff = new BYTE[1000];
+	memset(sendBuff, 0, 1000);
+	memcpy(sendBuff, (PBYTE)(LPCTSTR)Command, Len);
+	send(sk, (char*)& Len, sizeof(Len), 0);
+	send(sk, (char*)sendBuff, Len, 0);
+	delete sendBuff;
+}
+
 
 int CServerDlg::mRecv(SOCKET &sk, CString& Command)
 {
@@ -321,18 +399,6 @@ int CServerDlg::mRecv(SOCKET &sk, CString& Command)
 	if (Command.GetLength() == 0)
 		return -1;
 	return 0;
-}
-
-void CServerDlg::mSend(SOCKET sk, CString Command)
-{
-	int Len = Command.GetLength();
-	Len += Len;
-	PBYTE sendBuff = new BYTE[1000];
-	memset(sendBuff, 0, 1000);
-	memcpy(sendBuff, (PBYTE)(LPCTSTR)Command, Len);
-	send(sk, (char*)&Len, sizeof(Len), 0);
-	send(sk, (char*)sendBuff, Len, 0);
-	delete sendBuff;
 }
 
 vector<string> CServerDlg::Split(CString src)
@@ -367,5 +433,22 @@ void CServerDlg::OnBnClickedListen()
 	if (err)
 		MessageBox(_T("Cant call WSAAsyncSelect"));
 	GetDlgItem(BTN_LISTEN)->EnableWindow(FALSE);
-	pSock = vector<SockName*>(0);
+	//pSock = vector<SockName*>(0);
+}
+
+
+void CServerDlg::OnBnClickedExit()
+{
+	INT_PTR i = MessageBox(_T("Ban muon dong server?"), _T("Confirm"), MB_OKCANCEL);
+	if (i == IDCANCEL)
+		return;
+
+	// Xoa pSocket
+	for (int i = 0; i < pSock.size(); i++)
+	{
+		closesocket(pSock[i]->sockClient);
+		delete pSock[i];
+	}
+
+	OnCancel();
 }

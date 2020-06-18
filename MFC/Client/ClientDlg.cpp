@@ -55,6 +55,7 @@ CClientDlg::CClientDlg(CWnd* pParent /*=nullptr*/)
 	, IP(_T(""))
 	, username(_T(""))
 	, password(_T(""))
+	, chatMessage(_T(""))
 	, strItemSelected(_T(""))
 {
 	m_hIcon = AfxGetApp()->LoadIcon(IDR_MAINFRAME);
@@ -66,6 +67,8 @@ void CClientDlg::DoDataExchange(CDataExchange* pDX)
 	DDX_Text(pDX, EDIT_IP, IP);
 	DDX_Text(pDX, EDIT_USER, username);
 	DDX_Text(pDX, EDIT_PASS, password);
+	DDX_Text(pDX, EDIT_MSG, chatMessage);
+	DDX_Control(pDX, LSTBOX_CHAT, lstBoxChat);
 	DDX_Control(pDX, LST_ONLUSER, lst_onluser);
 	DDX_LBString(pDX, LST_ONLUSER, strItemSelected);
 }
@@ -78,7 +81,9 @@ BEGIN_MESSAGE_MAP(CClientDlg, CDialogEx)
 	ON_LBN_SELCHANGE(LSTBOX_CHAT, &CClientDlg::OnLbnSelchangeChat)
 	ON_BN_CLICKED(BTN_LOGIN, &CClientDlg::OnBnClickedLogin)
 	ON_BN_CLICKED(BTN_SIGNUP, &CClientDlg::OnBnClickedSignup)
+	ON_BN_CLICKED(BTN_SEND, &CClientDlg::OnBnClickedSend)
 	ON_LBN_DBLCLK(LST_ONLUSER, &CClientDlg::OnLbnDblclkOnluser)
+	ON_BN_CLICKED(BTN_LOGOUT, &CClientDlg::OnBnClickedLogout)
 END_MESSAGE_MAP()
 
 
@@ -114,6 +119,8 @@ BOOL CClientDlg::OnInitDialog()
 	SetIcon(m_hIcon, FALSE);		// Set small icon
 
 	// TODO: Add extra initialization here
+	// Gan IP mac dinh cho edit box
+	GetDlgItem(EDIT_IP)->SetWindowTextW(_T("127.0.0.1"));
 
 	return TRUE;  // return TRUE  unless you set the focus to a control
 }
@@ -196,7 +203,7 @@ LRESULT CClientDlg::SockMsg(WPARAM wParam, LPARAM lParam)
 					SetDlgItemTextW(EDIT_PASS, _T(""));
 					break;
 				}
-				case 2: { //Login: 2 0 - Fail, 2 1 - Success
+				case FLAG_LOGIN: { //Login: 2 0 - Fail, 2 1 - Success
 					int result = stoi(res[1]);
 					if (result == 0) {
 						MessageBox(_T("Sai Username hoac Password!"));
@@ -209,17 +216,64 @@ LRESULT CClientDlg::SockMsg(WPARAM wParam, LPARAM lParam)
 						GetDlgItem(EDIT_IP)->EnableWindow(FALSE);
 						GetDlgItem(EDIT_USER)->EnableWindow(FALSE);
 						GetDlgItem(EDIT_PASS)->EnableWindow(FALSE);
+						GetDlgItem(BTN_SEND)->EnableWindow(TRUE);
+						GetDlgItem(BTN_FILE)->EnableWindow(TRUE);
+						GetDlgItem(BTN_LOGOUT)->EnableWindow(TRUE);
 					}
+					break;
+				}
+				case FLAG_CHAT_PUBLIC: {
+					// res[0]: flag
+					// res[1]: sender (username cua client da gui tin nhan public)
+					// res[2]: noi dung tin nhan public
+
+					// Hien thi noi dung chat len listbox chat
+					string chatText = res[1] + ": " + res[2]; // format: "Sender: message"
+					lstBoxChat.AddString(CString(chatText.c_str()));
+					UpdateData(false);
 					break;
 				}
 				case 4: {
 					for (int i = 1; i < res.size(); i++) {
 						lst_onluser.AddString(CString(res[i].c_str()));
 					}
+
+					// THong bao co user moi login
+					if (res.size() == 2 && CString(res[1].c_str()) != username)
+					{
+						string text = "*" + res[1] + " da dang nhap!";
+						lstBoxChat.AddString(CString(text.c_str()));
+						UpdateData(false);
+					}
+					break;
+				}
+				case FLAG_LOGOUT: {
+					// res[0]: flag
+					// res[1]: user name cua client da log out
+
+					// Xoa user name da log out ra khoi ds online user
+					int idx = lst_onluser.FindString(0, CString(res[1].c_str()));
+					lst_onluser.DeleteString(idx);
+
+					// Hien thong bao user da logout
+					string text = "*" + res[1] + " da dang xuat!";
+					lstBoxChat.AddString(CString(text.c_str()));
+
+					UpdateData(false);
 					break;
 				}
 			}
 
+			break;
+		}
+		case FD_CLOSE: {
+			closesocket(wParam);
+			MessageBox(_T("Server da dong ket noi!"));
+
+			GetDlgItem(BTN_SEND)->EnableWindow(false);
+			GetDlgItem(BTN_FILE)->EnableWindow(false);
+
+			break;
 		}
 	}
 	return 0;
@@ -236,6 +290,7 @@ char* CClientDlg::ConvertToChar(const CString& s)
 
 void CClientDlg::mSend(CString Command)
 {
+	//MessageBox(_T("Da gui du lieu cho server"));
 	int Len = Command.GetLength();
 	Len += Len;
 	PBYTE sendBuff = new BYTE[1000];
@@ -243,7 +298,7 @@ void CClientDlg::mSend(CString Command)
 	memcpy(sendBuff, (PBYTE)(LPCTSTR)Command, Len);
 	send(sClient, (char*)&Len, sizeof(Len), 0);
 	send(sClient, (char*)sendBuff, Len, 0);
-	delete sendBuff;
+	delete[] sendBuff;
 }
 
 int CClientDlg::mRecv(CString& Command)
@@ -381,8 +436,64 @@ void CClientDlg::OnBnClickedSignup()
 }
 
 
+void CClientDlg::OnBnClickedSend()
+{
+	UpdateData(true);
+
+	if (chatMessage.IsEmpty())
+	{
+		MessageBox(_T("Ban chua nhap tin nhan!"));
+		return;
+	}
+
+	// Hien thi noi dung chat len list box
+	lstBoxChat.AddString(username + _T(": ") + chatMessage);
+	UpdateData(false);
+
+	// Gui command qua cho server
+	CString command = _T("3\r\n") + username + _T("\r\n") + chatMessage;
+	mSend(command);
+
+	chatMessage = _T("");
+	UpdateData(false);
+}
+
 void CClientDlg::OnLbnDblclkOnluser()
 {
 	lst_onluser.GetText(lst_onluser.GetCurSel(), strItemSelected);
 	MessageBox(strItemSelected);
+}
+
+
+void CClientDlg::OnBnClickedLogout()
+{
+	INT_PTR i = MessageBox(_T("Ban muon logout?"), _T("Confirm"), MB_OKCANCEL);
+	if (i == IDCANCEL)
+		return;
+
+	GetDlgItem(BTN_LOGOUT)->EnableWindow(false);
+	GetDlgItem(BTN_SEND)->EnableWindow(false);
+	GetDlgItem(BTN_FILE)->EnableWindow(false);
+	GetDlgItem(BTN_LOGIN)->EnableWindow(true);
+	GetDlgItem(BTN_SIGNUP)->EnableWindow(true);
+	GetDlgItem(EDIT_IP)->EnableWindow(true);
+	GetDlgItem(EDIT_USER)->EnableWindow(true);
+	GetDlgItem(EDIT_PASS)->EnableWindow(true);
+
+	// Xoa noi dung listbox online user
+	lst_onluser.ResetContent();
+
+	// Xoa noi dung listbox chat
+	lstBoxChat.ResetContent();
+
+	MessageBox(_T("Dang xuat thanh cong!"));
+
+	// Gui goi tin cho server
+	//CString command = _T("5\r\n") + username;
+	//mSend(command);
+
+	// Dong ket noi
+	closesocket(sClient);
+
+	UpdateData(false);
 }

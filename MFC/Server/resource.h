@@ -8,7 +8,7 @@
 #define IDD_SERVER_DIALOG               102
 #define IDR_MAINFRAME                   128
 #define BTN_LISTEN                      1000
-#define BTN_LISTEN2                     1001
+#define BTN_EXIT                        1001
 #define LST_EVENT                       1002
 #define IDC_LIST1                       1003
 

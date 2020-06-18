@@ -18,6 +18,9 @@ using namespace std;
 #define WM_SOCKET WM_USER+1
 
 #define FLAG_SIGNUP 1
+#define FLAG_LOGIN 2
+#define FLAG_CHAT_PUBLIC 3
+#define FLAG_LOGOUT 5
 
 
 // CServerDlg dialog
@@ -56,16 +59,17 @@ public:
 	/*Biến*/
 	//SockName* pSock;
 	vector<SockName*> pSock;
-	SOCKET sockServer, sockClient;
+	SOCKET sockServer, sockClient;	// bien sockClient chua dc su dung
 	struct sockaddr_in serverAdd;
 
 	/*Hàm khác*/
 	LRESULT SockMsg(WPARAM wParam, LPARAM lParam);
-	int mRecv(SOCKET &sk, CString& Command);
 	void mSend(SOCKET sk, CString Command);
+	int mRecv(SOCKET &sk, CString& Command);
 	vector<string> Split(CString src);
 
 	/*Hàm onClicked và biến của UI*/
 	afx_msg void OnBnClickedListen();
 	CListBox lst_event;
+	afx_msg void OnBnClickedExit();
 };
