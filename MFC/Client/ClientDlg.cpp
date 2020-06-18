@@ -191,7 +191,7 @@ LRESULT CClientDlg::SockMsg(WPARAM wParam, LPARAM lParam)
 			vector<string> res =  Split(temp);
 			int flag = stoi(res[0]); // chuyen chuoi thanh so
 			switch (flag) {
-				case 1: { //Sign up: 1 0 - Fail, 1 1 - Success
+				case FLAG_SIGNUP: { //Sign up: 1 0 - Fail, 1 1 - Success
 					int result = stoi(res[1]);
 					if (result == 0) {
 						MessageBox(_T("Dang ki that bai! Moi chon Username khac!"));
@@ -199,6 +199,9 @@ LRESULT CClientDlg::SockMsg(WPARAM wParam, LPARAM lParam)
 					else {
 						MessageBox(_T("Dang ki thanh cong! Moi ban dang nhap!"));
 					}
+					// Close Client
+					closesocket(sClient);
+
 					SetDlgItemTextW(EDIT_USER, _T(""));
 					SetDlgItemTextW(EDIT_PASS, _T(""));
 					break;
@@ -207,6 +210,8 @@ LRESULT CClientDlg::SockMsg(WPARAM wParam, LPARAM lParam)
 					int result = stoi(res[1]);
 					if (result == 0) {
 						MessageBox(_T("Sai Username hoac Password!"));
+						// Close Client
+						closesocket(sClient);
 					}
 					else {
 						MessageBox(_T("Dang nhap thanh cong! Cung chat nao!"));
@@ -233,7 +238,7 @@ LRESULT CClientDlg::SockMsg(WPARAM wParam, LPARAM lParam)
 					UpdateData(false);
 					break;
 				}
-				case 4: {
+				case FLAG_NEW_USER: {
 					for (int i = 1; i < res.size(); i++) {
 						lst_onluser.AddString(CString(res[i].c_str()));
 					}

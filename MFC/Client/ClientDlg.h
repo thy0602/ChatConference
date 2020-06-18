@@ -15,8 +15,8 @@ using namespace std;
 #define FLAG_SIGNUP 1
 #define FLAG_LOGIN 2
 #define FLAG_CHAT_PUBLIC 3
+#define FLAG_NEW_USER 4
 #define FLAG_LOGOUT 5
-#define FLAG_DEL_ONLUSER 6
 
 // CClientDlg dialog
 class CClientDlg : public CDialogEx

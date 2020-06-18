@@ -232,6 +232,9 @@ LRESULT CServerDlg::SockMsg(WPARAM wParam, LPARAM lParam)
 					}
 					is.close();
 
+					// Xoa thang sockClient moi vua them vao
+					pSock.pop_back();
+
 					if (founded) {
 						temp = _T("1\r\n0");
 						mSend(wParam, temp);
@@ -247,11 +250,7 @@ LRESULT CServerDlg::SockMsg(WPARAM wParam, LPARAM lParam)
 
 					temp = _T("1\r\n1");
 					mSend(wParam, temp);
-
-					// Close Client
-					closesocket(wParam);
-					// Xoa thang sockClient moi vua them vao
-					pSock.pop_back();
+					
 					break;
 				}
 				case FLAG_LOGIN: { // Login
@@ -270,13 +269,12 @@ LRESULT CServerDlg::SockMsg(WPARAM wParam, LPARAM lParam)
 					is.close();
 
 					if (!founded) {
+						//Xoa thang sockClient moi vua them vao
+						pSock.pop_back();
+
 						temp = _T("2\r\n0");
 						mSend(wParam, temp);
 
-						// Close Client
-						closesocket(wParam);
-						// Xoa thang sockClient moi vua them vao
-						pSock.pop_back();
 						return 0;
 					}
 
@@ -339,7 +337,11 @@ LRESULT CServerDlg::SockMsg(WPARAM wParam, LPARAM lParam)
 					pos = i;
 				}
 			}
-
+			
+			// Neu khong co trong pSock thi break
+			if (pos == -1)
+				break;
+			
 			// Hien thong bao user log out len list event cua server
 			string text = pSock[pos]->Name + " logout";
 			lst_event.AddString(CString(text.c_str()));
