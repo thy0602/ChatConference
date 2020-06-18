@@ -190,12 +190,11 @@ LRESULT CServerDlg::SockMsg(WPARAM wParam, LPARAM lParam)
 			SockName* p = new SockName;
 			p->sockClient = accept(wParam, NULL, NULL);
 			pSock.push_back(p);
-			lst_event.AddString(_T("1 Connect Sucess"));
+			lst_event.AddString(_T("Connect Sucess"));
 			UpdateData(FALSE);
 			break;
 		}
 		case FD_READ: {
-			lst_event.AddString(_T("Co Client gui message"));
 			// Update gia tri tu code len giao dien
 			UpdateData(FALSE);
 			int pos = -1;
@@ -204,7 +203,6 @@ LRESULT CServerDlg::SockMsg(WPARAM wParam, LPARAM lParam)
 					pos = i;
 				}
 			}
-			
 
 			CString temp;
 			if (mRecv(wParam, temp) < 0)
@@ -229,13 +227,76 @@ LRESULT CServerDlg::SockMsg(WPARAM wParam, LPARAM lParam)
 					is.close();
 
 					if (founded) {
-						MessageBox(_T("Trung Username. Moi chon Username khac!"));
+						temp = _T("1\r\n0");
+						mSend(wParam, temp);
 						return 0;
 					}
 
 					os.open("user.txt", ios::app | ios::ate);
 					os << recvUser << " " << recvPass << endl;
 					os.close();
+
+					CString str = CString(recvUser.c_str()) + _T(" vua moi sign up!");
+					lst_event.AddString(str);
+
+					temp = _T("1\r\n1");
+					mSend(wParam, temp);
+
+					// Close Client
+					closesocket(wParam);
+					// Xoa thang sockClient moi vua them vao
+					pSock.pop_back();
+					break;
+				}
+				case 2: { // Login
+					recvUser = res[1];
+					recvPass = res[2];
+
+					is.open("user.txt");
+					bool founded = false;
+					while (!is.eof()) {
+						is >> username >> pass;
+						if (username == recvUser && pass == recvPass) {
+							founded = true;
+							break;
+						}
+					}
+					is.close();
+
+					if (!founded) {
+						temp = _T("2\r\n0");
+						mSend(wParam, temp);
+
+						// Close Client
+						closesocket(wParam);
+						// Xoa thang sockClient moi vua them vao
+						pSock.pop_back();
+						return 0;
+					}
+
+					temp = CString(recvUser.c_str()) + _T(" da dang nhap");
+					lst_event.AddString(temp);
+
+					// Set Name cho pSock[pos]
+					pSock[pos]->Name = recvUser;
+
+					// Gui thong bao login thanh cong cho client
+					temp = _T("2\r\n1");
+					mSend(wParam, temp);
+
+					// Gui cac user dang online cho client moi login
+					temp = _T("4");
+					for (int i = 0; i < pSock.size(); i++) {
+						temp += _T("\r\n") + CString(pSock[i]->Name.c_str());
+					}
+					mSend(wParam, temp);
+
+					// Gui ten user moi vua online cho cac user da online truoc do
+					for (int i = 0; i < pSock.size() - 1; i++) {
+						temp = _T("4\r\n") + CString(pSock[pos]->Name.c_str());
+						mSend(pSock[i]->sockClient, temp);
+					}
+
 					break;
 				}
 			}
@@ -260,6 +321,18 @@ int CServerDlg::mRecv(SOCKET &sk, CString& Command)
 	if (Command.GetLength() == 0)
 		return -1;
 	return 0;
+}
+
+void CServerDlg::mSend(SOCKET sk, CString Command)
+{
+	int Len = Command.GetLength();
+	Len += Len;
+	PBYTE sendBuff = new BYTE[1000];
+	memset(sendBuff, 0, 1000);
+	memcpy(sendBuff, (PBYTE)(LPCTSTR)Command, Len);
+	send(sk, (char*)&Len, sizeof(Len), 0);
+	send(sk, (char*)sendBuff, Len, 0);
+	delete sendBuff;
 }
 
 vector<string> CServerDlg::Split(CString src)

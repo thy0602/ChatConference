@@ -62,7 +62,8 @@ public:
 	/*Hàm khác*/
 	LRESULT SockMsg(WPARAM wParam, LPARAM lParam);
 	int mRecv(SOCKET &sk, CString& Command);
-	vector<string> Split(CString s);
+	void mSend(SOCKET sk, CString Command);
+	vector<string> Split(CString src);
 
 	/*Hàm onClicked và biến của UI*/
 	afx_msg void OnBnClickedListen();

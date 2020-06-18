@@ -9,6 +9,7 @@
 #define WM_SOCKET WM_USER+2
 #include "afxsock.h"
 #include <string>
+#include <vector>
 using namespace std;
 
 
@@ -44,10 +45,13 @@ public:
 	CString Command;
 	int flag;
 
+	LRESULT SockMsg(WPARAM wParam, LPARAM lParam);
 	char* ConvertToChar(const CString& s);
 	void mSend(CString Command);
+	int mRecv(CString& Command);
 	bool findSpace(string s);
 	void ConnectToServer();
+	vector<string> Split(CString s);
 
 	afx_msg void OnLbnSelchangeChat();
 	afx_msg void OnBnClickedLogin();
@@ -55,4 +59,7 @@ public:
 	CString username;
 	CString password;
 	afx_msg void OnBnClickedSignup();
+	CListBox lst_onluser;
+	afx_msg void OnLbnDblclkOnluser();
+	CString strItemSelected;
 };
