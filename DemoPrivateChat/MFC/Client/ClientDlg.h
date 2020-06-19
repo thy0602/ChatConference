@@ -8,8 +8,10 @@
 #define PORT 25000
 #define WM_SOCKET WM_USER+2
 #include "afxsock.h"
+#include "PrivateChatDlg.h"
 #include <string>
 #include <vector>
+#include <memory>
 using namespace std;
 
 #define FLAG_SIGNUP 1
@@ -17,6 +19,8 @@ using namespace std;
 #define FLAG_CHAT_PUBLIC 3
 #define FLAG_NEW_USER 4
 #define FLAG_LOGOUT 5
+
+class PrivateChatDlg;
 
 // CClientDlg dialog
 class CClientDlg : public CDialogEx
@@ -78,4 +82,9 @@ public:
 	virtual void PostNcDestroy();
 	virtual void OnCancel();
 
+	// Xu li private chat
+	PrivateChatDlg* pPrvChatDlg = nullptr;
+	
+	void PrivateChatDlgDelete(PrivateChatDlg* pPrvDlg);
+	void demoPrivate(CString s);
 };

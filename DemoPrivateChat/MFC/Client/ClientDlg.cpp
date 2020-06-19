@@ -224,6 +224,8 @@ LRESULT CClientDlg::SockMsg(WPARAM wParam, LPARAM lParam)
 						GetDlgItem(EDIT_IP)->EnableWindow(FALSE);
 						GetDlgItem(EDIT_USER)->EnableWindow(FALSE);
 						GetDlgItem(EDIT_PASS)->EnableWindow(FALSE);
+
+						GetDlgItem(EDIT_MSG)->EnableWindow(TRUE);
 						GetDlgItem(BTN_SEND)->EnableWindow(TRUE);
 						GetDlgItem(BTN_FILE)->EnableWindow(TRUE);
 						GetDlgItem(BTN_LOGOUT)->EnableWindow(TRUE);
@@ -469,13 +471,23 @@ void CClientDlg::OnBnClickedSend()
 void CClientDlg::OnLbnDblclkOnluser()
 {
 	lst_onluser.GetText(lst_onluser.GetCurSel(), strItemSelected);
+	// Khong the click chinh minh
+	if (strItemSelected == username)
+		return;
+
 	CString text = _T("Ban muon gui tin nhan rieng cho ") + strItemSelected + _T("?");
 	INT_PTR i = MessageBox(text, _T("Confirm"), MB_OKCANCEL);
 	if (i == IDCANCEL)
 		return;
+
+	if (!pPrvChatDlg)
+	{
+		pPrvChatDlg = new PrivateChatDlg(this);
+		pPrvChatDlg->Create(IDD_PRV_CHAT, this);
+		pPrvChatDlg->ShowWindow(SW_SHOW);
+		pPrvChatDlg->updateSenderReceiver(username, strItemSelected);
+	}
 	
-
-
 }
 
 
@@ -488,6 +500,8 @@ void CClientDlg::OnBnClickedLogout()
 	GetDlgItem(BTN_LOGOUT)->EnableWindow(false);
 	GetDlgItem(BTN_SEND)->EnableWindow(false);
 	GetDlgItem(BTN_FILE)->EnableWindow(false);
+	GetDlgItem(EDIT_MSG)->EnableWindow(false);
+
 	GetDlgItem(BTN_LOGIN)->EnableWindow(true);
 	GetDlgItem(BTN_SIGNUP)->EnableWindow(true);
 	GetDlgItem(EDIT_IP)->EnableWindow(true);
@@ -526,5 +540,25 @@ void CClientDlg::PostNcDestroy()
 void CClientDlg::OnCancel()
 {
 	// TODO: Add your specialized code here and/or call the base class
+	INT_PTR i = MessageBox(_T("Ban muon thoat chuong trinh?"), _T("Confirm"), MB_OKCANCEL);
+	if (i == IDCANCEL)
+		return;
 	DestroyWindow();
+}
+
+void CClientDlg::PrivateChatDlgDelete(PrivateChatDlg* pPrvDlg)
+{
+	if (pPrvChatDlg && (pPrvChatDlg == pPrvDlg))
+	{
+		delete pPrvChatDlg;
+		pPrvChatDlg = nullptr;
+	}
+
+}
+
+void CClientDlg::demoPrivate(CString s)
+{
+	lstBoxChat.AddString(s);
+	pPrvChatDlg->lstBoxPrivateChat.AddString(s);
+	pPrvChatDlg->UpdateData(false);
 }
