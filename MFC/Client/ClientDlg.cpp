@@ -78,7 +78,6 @@ BEGIN_MESSAGE_MAP(CClientDlg, CDialogEx)
 	ON_WM_PAINT()
 	ON_WM_QUERYDRAGICON()
 	ON_MESSAGE(WM_SOCKET, SockMsg)
-	ON_LBN_SELCHANGE(LSTBOX_CHAT, &CClientDlg::OnLbnSelchangeChat)
 	ON_BN_CLICKED(BTN_LOGIN, &CClientDlg::OnBnClickedLogin)
 	ON_BN_CLICKED(BTN_SIGNUP, &CClientDlg::OnBnClickedSignup)
 	ON_BN_CLICKED(BTN_SEND, &CClientDlg::OnBnClickedSend)
@@ -191,11 +190,11 @@ LRESULT CClientDlg::SockMsg(WPARAM wParam, LPARAM lParam)
 			if (mRecv(temp) < 0)
 				break;
 			
-			vector<string> res =  Split(temp);
-			int flag = stoi(res[0]); // chuyen chuoi thanh so
+			vector<CString> res =  Split(temp);
+			int flag = _ttoi(res[0]); // chuyen chuoi thanh so
 			switch (flag) {
 				case FLAG_SIGNUP: { //Sign up: 1 0 - Fail, 1 1 - Success
-					int result = stoi(res[1]);
+					int result = _ttoi(res[1]);
 					if (result == 0) {
 						MessageBox(_T("Dang ki that bai! Moi chon Username khac!"));
 					}
@@ -210,7 +209,7 @@ LRESULT CClientDlg::SockMsg(WPARAM wParam, LPARAM lParam)
 					break;
 				}
 				case FLAG_LOGIN: { //Login: 2 0 - Fail, 2 1 - Success
-					int result = stoi(res[1]);
+					int result = _ttoi(res[1]);
 					if (result == 0) {
 						MessageBox(_T("Sai Username hoac Password!"));
 						// Close Client
@@ -224,6 +223,8 @@ LRESULT CClientDlg::SockMsg(WPARAM wParam, LPARAM lParam)
 						GetDlgItem(EDIT_IP)->EnableWindow(FALSE);
 						GetDlgItem(EDIT_USER)->EnableWindow(FALSE);
 						GetDlgItem(EDIT_PASS)->EnableWindow(FALSE);
+
+						GetDlgItem(EDIT_MSG)->EnableWindow(TRUE);
 						GetDlgItem(BTN_SEND)->EnableWindow(TRUE);
 						GetDlgItem(BTN_FILE)->EnableWindow(TRUE);
 						GetDlgItem(BTN_LOGOUT)->EnableWindow(TRUE);
@@ -236,23 +237,24 @@ LRESULT CClientDlg::SockMsg(WPARAM wParam, LPARAM lParam)
 					// res[2]: noi dung tin nhan public
 
 					// Hien thi noi dung chat len listbox chat
-					string chatText = res[1] + ": " + res[2]; // format: "Sender: message"
-					lstBoxChat.AddString(CString(chatText.c_str()));
+					CString chatText = res[1] + _T(": ") + res[2]; // format: "Sender: message"
+					lstBoxChat.AddString(chatText);
 					UpdateData(false);
 					break;
 				}
 				case FLAG_NEW_USER: {
+					// 4 - user1 - user2 - ...
 					for (int i = 1; i < res.size(); i++) {
-						lst_onluser.AddString(CString(res[i].c_str()));
+						lst_onluser.AddString(res[i]);
 					}
 
-					// THong bao co user moi login
-					if (res.size() == 2 && CString(res[1].c_str()) != username)
+					// Thong bao co user moi login
+					if (res.size() == 2 && res[1] != username)
 					{
-						string text = "*" + res[1] + " da dang nhap!";
-						lstBoxChat.AddString(CString(text.c_str()));
-						UpdateData(false);
+						CString text = _T("*") + res[1] + _T(" da dang nhap!");
+						lstBoxChat.AddString(text);
 					}
+					UpdateData(false);
 					break;
 				}
 				case FLAG_LOGOUT: {
@@ -260,14 +262,56 @@ LRESULT CClientDlg::SockMsg(WPARAM wParam, LPARAM lParam)
 					// res[1]: user name cua client da log out
 
 					// Xoa user name da log out ra khoi ds online user
-					int idx = lst_onluser.FindString(0, CString(res[1].c_str()));
+					int idx = lst_onluser.FindString(0, res[1]);
 					lst_onluser.DeleteString(idx);
 
 					// Hien thong bao user da logout
-					string text = "*" + res[1] + " da dang xuat!";
-					lstBoxChat.AddString(CString(text.c_str()));
+					CString text = _T("*") + res[1] + _T(" da dang xuat!");
+					lstBoxChat.AddString(text);
+
+					// Thong bao res[1] da logout den Client dang chat private
+					for (int i = 0; i < listPrv.size(); i++) {
+						if (listPrv[i]->prvReceiver == res[1]) {
+							CString temp = res[1] + " da logout!";
+							listPrv[i]->receivePrvMsg(temp);
+							listPrv[i]->GetDlgItem(IDC_EDIT_PRV_MSG)->EnableWindow(FALSE);
+							listPrv[i]->GetDlgItem(IDC_BTN_PRV_SEND)->EnableWindow(FALSE);
+							listPrv[i]->GetDlgItem(IDC_BTN_PRV_FILE)->EnableWindow(FALSE);
+							listPrv[i]->UpdateData(FALSE);
+							break;
+						}
+					}
 
 					UpdateData(false);
+					break;
+				}
+				case FLAG_CHAT_PRIVATE: { // Chat private
+					// Dang: 6-sender-message
+					CString sender = res[1];
+					CString message = res[2];
+					// Kiem tra xem cua so chat private voi sender da duoc mo chua
+					int pos = -1;
+					for (int i = 0; i < listPrv.size(); i++) {
+						if (listPrv[i]->prvReceiver == sender) {
+							pos = i;
+							break;
+						}
+					}
+
+					// TH cua so chat private da duoc mo
+					CString messageContent = sender + _T(": ") + message;
+					if (pos != -1) {
+						listPrv[pos]->receivePrvMsg(messageContent);
+						break;
+					}
+
+					// TH cua so chat private chua duoc mo
+					PrivateChatDlg* pPrvChatDlg = new PrivateChatDlg(this);
+					listPrv.push_back(pPrvChatDlg);
+					pPrvChatDlg->Create(IDD_PRV_CHAT, this);
+					pPrvChatDlg->ShowWindow(SW_SHOW);
+					pPrvChatDlg->updateSenderReceiver(username, sender);
+					pPrvChatDlg->receivePrvMsg(messageContent);
 					break;
 				}
 			}
@@ -396,28 +440,24 @@ void CClientDlg::ConnectToServer()
 	WSAAsyncSelect(sClient, m_hWnd, WM_SOCKET, FD_READ | FD_CLOSE);
 }
 
-vector<string> CClientDlg::Split(CString src)
+vector<CString> CClientDlg::Split(CString str)
 {
-	string delimiter = "\r\n";
-	string s = CW2A(src.GetString());
-	int pos = 0;
-	string token;
-	vector<string> res;
+	vector<CString> res;
+	int nTokenPos = 0;
+	CString strToken = str.Tokenize(_T("\r\n"), nTokenPos);
 
-	while ((pos = s.find(delimiter)) != std::string::npos) {
-		token = s.substr(0, pos);
-		res.push_back(token);
-		s.erase(0, pos + delimiter.length());
+	while (!strToken.IsEmpty())
+	{
+		res.push_back(strToken);
+		strToken = str.Tokenize(_T("\r\n"), nTokenPos);
 	}
-	res.push_back(s);
 	return res;
 }
 
-void CClientDlg::OnLbnSelchangeChat()
+string CClientDlg::CStringToString(CString s)
 {
-	// TODO: Add your control notification handler code here
+	return CW2A(s.GetString());
 }
-
 
 void CClientDlg::OnBnClickedLogin()
 {
@@ -469,13 +509,28 @@ void CClientDlg::OnBnClickedSend()
 void CClientDlg::OnLbnDblclkOnluser()
 {
 	lst_onluser.GetText(lst_onluser.GetCurSel(), strItemSelected);
+	// Khong the click chinh minh
+	if (strItemSelected == username)
+		return;
+
+	// Neu cua so chat private dang duoc mo thi khong the mo nua
+	for (int i = 0; i < listPrv.size(); i++) {
+		if (listPrv[i]->prvReceiver == strItemSelected) {
+			return;
+		}
+	}
+
 	CString text = _T("Ban muon gui tin nhan rieng cho ") + strItemSelected + _T("?");
 	INT_PTR i = MessageBox(text, _T("Confirm"), MB_OKCANCEL);
 	if (i == IDCANCEL)
 		return;
+
+	PrivateChatDlg* pPrvChatDlg = new PrivateChatDlg(this);
+	listPrv.push_back(pPrvChatDlg);
+	pPrvChatDlg->Create(IDD_PRV_CHAT, this);
+	pPrvChatDlg->ShowWindow(SW_SHOW);
+	pPrvChatDlg->updateSenderReceiver(username, strItemSelected);
 	
-
-
 }
 
 
@@ -488,6 +543,8 @@ void CClientDlg::OnBnClickedLogout()
 	GetDlgItem(BTN_LOGOUT)->EnableWindow(false);
 	GetDlgItem(BTN_SEND)->EnableWindow(false);
 	GetDlgItem(BTN_FILE)->EnableWindow(false);
+	GetDlgItem(EDIT_MSG)->EnableWindow(false);
+
 	GetDlgItem(BTN_LOGIN)->EnableWindow(true);
 	GetDlgItem(BTN_SIGNUP)->EnableWindow(true);
 	GetDlgItem(EDIT_IP)->EnableWindow(true);
@@ -501,10 +558,6 @@ void CClientDlg::OnBnClickedLogout()
 	lstBoxChat.ResetContent();
 
 	MessageBox(_T("Dang xuat thanh cong!"));
-
-	// Gui goi tin cho server
-	//CString command = _T("5\r\n") + username;
-	//mSend(command);
 
 	// Dong ket noi
 	closesocket(sClient);
@@ -526,5 +579,23 @@ void CClientDlg::PostNcDestroy()
 void CClientDlg::OnCancel()
 {
 	// TODO: Add your specialized code here and/or call the base class
+	INT_PTR i = MessageBox(_T("Ban muon thoat chuong trinh?"), _T("Confirm"), MB_OKCANCEL);
+	if (i == IDCANCEL)
+		return;
 	DestroyWindow();
+}
+
+void CClientDlg::PrivateChatDlgDelete(PrivateChatDlg* pPrvDlg)
+{
+	for (int i = 0; i < listPrv.size(); i++) {
+		if (listPrv[i] == pPrvDlg) {
+			delete listPrv[i];
+			listPrv.erase(listPrv.begin() + i);
+		}
+	}
+}
+
+void CClientDlg::sendPrvMsgToServer(CString s)
+{
+	mSend(s);
 }

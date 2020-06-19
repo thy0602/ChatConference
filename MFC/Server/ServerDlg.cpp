@@ -65,6 +65,7 @@ void CServerDlg::DoDataExchange(CDataExchange* pDX)
 {
 	CDialogEx::DoDataExchange(pDX);
 	DDX_Control(pDX, LST_EVENT, lst_event);
+	DDX_Control(pDX, LST_CLIENTS, lst_clients);
 }
 
 BEGIN_MESSAGE_MAP(CServerDlg, CDialogEx)
@@ -190,7 +191,6 @@ LRESULT CServerDlg::SockMsg(WPARAM wParam, LPARAM lParam)
 			SockName* p = new SockName;
 			p->sockClient = accept(wParam, NULL, NULL);
 			pSock.push_back(p);
-			lst_event.AddString(_T("Connect Sucess"));
 			UpdateData(FALSE);
 			break;
 		}
@@ -212,15 +212,15 @@ LRESULT CServerDlg::SockMsg(WPARAM wParam, LPARAM lParam)
 				break;
 
 			// Tach flag va content trong goi tin nhan duoc
-			vector<string> res = Split(temp);
-			int flag = stoi(res[0]);	//Chuyển chuỗi thành số
+			vector<CString> res = Split(temp);
+			int flag = _ttoi(res[0]);	//Chuyển chuỗi thành số
 			
 			// Kiem tra flag va thuc hien xu li chuc nang tuong ung
 			string username, pass, recvUser, recvPass;
 			switch (flag) {
 				case FLAG_SIGNUP: { //Sign up
-					recvUser = res[1];
-					recvPass = res[2];
+					recvUser = CStringToString(res[1]);
+					recvPass = CStringToString(res[2]);
 
 					is.open("user.txt");
 					bool founded = false;
@@ -254,8 +254,8 @@ LRESULT CServerDlg::SockMsg(WPARAM wParam, LPARAM lParam)
 					break;
 				}
 				case FLAG_LOGIN: { // Login
-					recvUser = res[1];
-					recvPass = res[2];
+					recvUser = CStringToString(res[1]);
+					recvPass = CStringToString(res[2]);
 
 					is.open("user.txt");
 					bool founded = false;
@@ -281,6 +281,9 @@ LRESULT CServerDlg::SockMsg(WPARAM wParam, LPARAM lParam)
 					temp = CString(recvUser.c_str()) + _T(" da dang nhap");
 					lst_event.AddString(temp);
 
+					// Them Client moi vao Connected Clients
+					lst_clients.AddString(CString(recvUser.c_str()));
+
 					// Set Name cho pSock[pos]
 					pSock[pos]->Name = recvUser;
 
@@ -301,6 +304,8 @@ LRESULT CServerDlg::SockMsg(WPARAM wParam, LPARAM lParam)
 						mSend(pSock[i]->sockClient, temp);
 					}
 
+					UpdateData(FALSE);
+
 					break;
 				}
 				case FLAG_CHAT_PUBLIC: { // Chat public
@@ -309,13 +314,13 @@ LRESULT CServerDlg::SockMsg(WPARAM wParam, LPARAM lParam)
 					// res[2]: chatMessage
 
 					// Hien thi noi dung chat len list event cua server
-					string chatText = res[1] + ": " + res[2]; // format: "Sender: message"
-					lst_event.AddString(CString(chatText.c_str()));
+					CString chatText = res[1] + _T(": ") + res[2]; // format: "Sender: message"
+					lst_event.AddString(chatText);
 					UpdateData(false);
 					
 					// Gui noi dung chat cho cac client con lai
-					string commandTemp = "3\r\n" + res[1] + "\r\n" + res[2];
-					CString command = CString((commandTemp.c_str()));
+					CString commandTemp = _T("3\r\n") + res[1] + _T("\r\n") + res[2];
+					CString command = commandTemp;
 					for (int i = 0; i < pSock.size(); i++)
 					{
 						// pos la vi tri cua socket (trong vector pSock) da gui chat public
@@ -324,6 +329,25 @@ LRESULT CServerDlg::SockMsg(WPARAM wParam, LPARAM lParam)
 							mSend(pSock[i]->sockClient, command);
 						}
 					}
+					break;
+				}
+				case FLAG_CHAT_PRIVATE: {
+					// Dang: 6-receiver-message
+					CString receiver = res[1];
+					CString message = res[2];
+
+					CString temp;
+					temp = CString(pSock[pos]->Name.c_str()) + " to " + receiver + " (privately): " + message;
+					lst_event.AddString(temp);
+
+					for (int i = 0; i < pSock.size(); i++) {
+						if (CStringToString(receiver) == pSock[i]->Name) {
+							temp = _T("6\r\n") + CString(pSock[pos]->Name.c_str()) + _T("\r\n") + message;
+							mSend(pSock[i]->sockClient, temp);
+							break;
+						}
+					}
+					UpdateData(FALSE);
 					break;
 				}
 			}
@@ -357,6 +381,9 @@ LRESULT CServerDlg::SockMsg(WPARAM wParam, LPARAM lParam)
 					mSend(pSock[i]->sockClient, command);
 				}
 			}
+
+			// Xoa client da dong ket noi trong Connected Clients
+			lst_clients.DeleteString(pos);
 
 			// Dong ket noi
 			closesocket(wParam);
@@ -403,21 +430,23 @@ int CServerDlg::mRecv(SOCKET &sk, CString& Command)
 	return 0;
 }
 
-vector<string> CServerDlg::Split(CString src)
+vector<CString> CServerDlg::Split(CString str)
 {
-	string delimiter = "\r\n";
-	string s = CW2A(src.GetString());
-	int pos = 0;
-	string token;
-	vector<string> res;
+	vector<CString> res;
+	int nTokenPos = 0;
+	CString strToken = str.Tokenize(_T("\r\n"), nTokenPos);
 
-	while ((pos = s.find(delimiter)) != std::string::npos) {
-		token = s.substr(0, pos);
-		res.push_back(token);
-		s.erase(0, pos + delimiter.length());
+	while (!strToken.IsEmpty())
+	{
+		res.push_back(strToken);
+		strToken = str.Tokenize(_T("\r\n"), nTokenPos);
 	}
-	res.push_back(s);
 	return res;
+}
+
+string CServerDlg::CStringToString(CString s)
+{
+	return CW2A(s.GetString());
 }
 
 void CServerDlg::OnBnClickedListen()
@@ -441,24 +470,17 @@ void CServerDlg::OnBnClickedListen()
 
 void CServerDlg::OnBnClickedExit()
 {
-	INT_PTR i = MessageBox(_T("Ban muon dong server?"), _T("Confirm"), MB_OKCANCEL);
-	if (i == IDCANCEL)
-		return;
-
-	// Xoa pSocket
-	for (int i = 0; i < pSock.size(); i++)
-	{
-		closesocket(pSock[i]->sockClient);
-		delete pSock[i];
-	}
-
-	CDialogEx::OnCancel();
+	OnCancel();
 }
 
 
 void CServerDlg::OnCancel()
 {
 	// TODO: Add your specialized code here and/or call the base class
+	INT_PTR i = MessageBox(_T("Ban muon dong server?"), _T("Confirm"), MB_OKCANCEL);
+	if (i == IDCANCEL)
+		return;
+
 	// Xoa pSocket
 	for (int i = 0; i < pSock.size(); i++)
 	{

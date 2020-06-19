@@ -11,6 +11,8 @@
 #define BTN_EXIT                        1001
 #define LST_EVENT                       1002
 #define IDC_LIST1                       1003
+#define LST_ONLCLIENT                   1003
+#define LST_CLIENTS                     1003
 
 // Next default values for new objects
 // 

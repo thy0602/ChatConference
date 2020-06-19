@@ -21,6 +21,7 @@ using namespace std;
 #define FLAG_LOGIN 2
 #define FLAG_CHAT_PUBLIC 3
 #define FLAG_LOGOUT 5
+#define FLAG_CHAT_PRIVATE 6
 
 
 // CServerDlg dialog
@@ -66,12 +67,13 @@ public:
 	LRESULT SockMsg(WPARAM wParam, LPARAM lParam);
 	void mSend(SOCKET sk, CString Command);
 	int mRecv(SOCKET &sk, CString& Command);
-	vector<string> Split(CString src);
+	vector<CString> Split(CString str);
+	string CStringToString(CString s);
 
 	/*Hàm onClicked và biến của UI*/
 	afx_msg void OnBnClickedListen();
 	CListBox lst_event;
 	afx_msg void OnBnClickedExit();
-//	virtual void OnCancel();
 	virtual void OnCancel();
+	CListBox lst_clients;
 };
