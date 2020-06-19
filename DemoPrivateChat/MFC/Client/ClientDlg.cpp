@@ -269,6 +269,19 @@ LRESULT CClientDlg::SockMsg(WPARAM wParam, LPARAM lParam)
 					string text = "*" + res[1] + " da dang xuat!";
 					lstBoxChat.AddString(CString(text.c_str()));
 
+					// Thong bao res[1] da logout den Client dang chat private
+					for (int i = 0; i < listPrv.size(); i++) {
+						if (listPrv[i]->prvReceiver == CString(res[1].c_str())) {
+							CString temp = CString(res[1].c_str()) + " da logout!";
+							listPrv[i]->receivePrvMsg(temp);
+							listPrv[i]->GetDlgItem(IDC_EDIT_PRV_MSG)->EnableWindow(FALSE);
+							listPrv[i]->GetDlgItem(IDC_BTN_PRV_SEND)->EnableWindow(FALSE);
+							listPrv[i]->GetDlgItem(IDC_BTN_PRV_FILE)->EnableWindow(FALSE);
+							listPrv[i]->UpdateData(FALSE);
+							break;
+						}
+					}
+
 					UpdateData(false);
 					break;
 				}
@@ -549,10 +562,6 @@ void CClientDlg::OnBnClickedLogout()
 	lstBoxChat.ResetContent();
 
 	MessageBox(_T("Dang xuat thanh cong!"));
-
-	// Gui goi tin cho server
-	//CString command = _T("5\r\n") + username;
-	//mSend(command);
 
 	// Dong ket noi
 	closesocket(sClient);
