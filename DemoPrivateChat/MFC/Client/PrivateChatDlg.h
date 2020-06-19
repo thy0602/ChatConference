@@ -28,6 +28,7 @@ public:
 	CListBox lstBoxPrivateChat;
 
 	void updateSenderReceiver(CString sender, CString receiver);
+	void receivePrvMsg(CString s);
 	virtual void OnCancel();
 	virtual void PostNcDestroy();
 	afx_msg void OnBnClickedBtnPrvSend();

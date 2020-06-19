@@ -21,6 +21,7 @@ using namespace std;
 #define FLAG_LOGIN 2
 #define FLAG_CHAT_PUBLIC 3
 #define FLAG_LOGOUT 5
+#define FLAG_CHAT_PRIVATE 6
 
 
 // CServerDlg dialog

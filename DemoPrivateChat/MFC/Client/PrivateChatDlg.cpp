@@ -50,9 +50,18 @@ void PrivateChatDlg::updateSenderReceiver(CString sender, CString receiver)
 	UpdateData(false);
 }
 
+void PrivateChatDlg::receivePrvMsg(CString s)
+{
+	lstBoxPrivateChat.AddString(s);
+	UpdateData(FALSE);
+}
+
 void PrivateChatDlg::OnCancel()
 {
 	// TODO: Add your specialized code here and/or call the base class
+	// Xoa khoi listPri ben Client gui
+	/*auto* pParent{ dynamic_cast<CClientDlg*>(parent) };
+	pParent->deletePriChat();*/
 	DestroyWindow();
 }
 
@@ -80,7 +89,11 @@ void PrivateChatDlg::OnBnClickedBtnPrvSend()
 		auto* pParent{ dynamic_cast<CClientDlg*>(parent) };
 		if (pParent)
 		{
-			pParent->demoPrivate(chatMessage);
+			CString temp = _T("6\r\n") + prvReceiver + _T("\r\n") + chatMessage;
+			pParent->sendPrvMsgToServer(temp);
+
+			CString msg = prvSender + ": " + chatMessage;
+			lstBoxPrivateChat.AddString(msg);
 
 			MessageBox(_T("Send successfully!"));
 			chatMessage = _T("");

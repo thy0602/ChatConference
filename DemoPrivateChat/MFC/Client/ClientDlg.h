@@ -12,6 +12,7 @@
 #include <string>
 #include <vector>
 #include <memory>
+#include <unordered_set>;
 using namespace std;
 
 #define FLAG_SIGNUP 1
@@ -19,6 +20,7 @@ using namespace std;
 #define FLAG_CHAT_PUBLIC 3
 #define FLAG_NEW_USER 4
 #define FLAG_LOGOUT 5
+#define FLAG_CHAT_PRIVATE 6
 
 class PrivateChatDlg;
 
@@ -83,8 +85,10 @@ public:
 	virtual void OnCancel();
 
 	// Xu li private chat
-	PrivateChatDlg* pPrvChatDlg = nullptr;
+	//PrivateChatDlg* pPrvChatDlg = nullptr;
+	vector< PrivateChatDlg*> listPrv;
+	//unordered_set<CString> setOpenUserPrv;
 	
 	void PrivateChatDlgDelete(PrivateChatDlg* pPrvDlg);
-	void demoPrivate(CString s);
+	void sendPrvMsgToServer(CString s);
 };

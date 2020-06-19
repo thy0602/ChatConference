@@ -272,6 +272,35 @@ LRESULT CClientDlg::SockMsg(WPARAM wParam, LPARAM lParam)
 					UpdateData(false);
 					break;
 				}
+				case FLAG_CHAT_PRIVATE: { // Chat private
+					// Dang: 6-sender-message
+					string sender = res[1];
+					string message = res[2];
+					// Kiem tra xem cua so chat private voi sender da duoc mo chua
+					int pos = -1;
+					for (int i = 0; i < listPrv.size(); i++) {
+						if (listPrv[i]->prvReceiver == CString(sender.c_str())) {
+							pos = i;
+							break;
+						}
+					}
+
+					// TH cua so chat private da duoc mo
+					CString messageContent = CString(sender.c_str()) + _T(": ") + CString(message.c_str());;
+					if (pos != -1) {
+						listPrv[pos]->receivePrvMsg(messageContent);
+						break;
+					}
+
+					// TH cua so chat private chua duoc mo
+					PrivateChatDlg* pPrvChatDlg = new PrivateChatDlg(this);
+					listPrv.push_back(pPrvChatDlg);
+					pPrvChatDlg->Create(IDD_PRV_CHAT, this);
+					pPrvChatDlg->ShowWindow(SW_SHOW);
+					pPrvChatDlg->updateSenderReceiver(username, CString(sender.c_str()));
+					pPrvChatDlg->receivePrvMsg(messageContent);
+					break;
+				}
 			}
 
 			break;
@@ -475,18 +504,23 @@ void CClientDlg::OnLbnDblclkOnluser()
 	if (strItemSelected == username)
 		return;
 
+	// Neu cua so chat private dang duoc mo thi khong the mo nua
+	for (int i = 0; i < listPrv.size(); i++) {
+		if (listPrv[i]->prvReceiver == strItemSelected) {
+			return;
+		}
+	}
+
 	CString text = _T("Ban muon gui tin nhan rieng cho ") + strItemSelected + _T("?");
 	INT_PTR i = MessageBox(text, _T("Confirm"), MB_OKCANCEL);
 	if (i == IDCANCEL)
 		return;
 
-	if (!pPrvChatDlg)
-	{
-		pPrvChatDlg = new PrivateChatDlg(this);
-		pPrvChatDlg->Create(IDD_PRV_CHAT, this);
-		pPrvChatDlg->ShowWindow(SW_SHOW);
-		pPrvChatDlg->updateSenderReceiver(username, strItemSelected);
-	}
+	PrivateChatDlg* pPrvChatDlg = new PrivateChatDlg(this);
+	listPrv.push_back(pPrvChatDlg);
+	pPrvChatDlg->Create(IDD_PRV_CHAT, this);
+	pPrvChatDlg->ShowWindow(SW_SHOW);
+	pPrvChatDlg->updateSenderReceiver(username, strItemSelected);
 	
 }
 
@@ -548,17 +582,15 @@ void CClientDlg::OnCancel()
 
 void CClientDlg::PrivateChatDlgDelete(PrivateChatDlg* pPrvDlg)
 {
-	if (pPrvChatDlg && (pPrvChatDlg == pPrvDlg))
-	{
-		delete pPrvChatDlg;
-		pPrvChatDlg = nullptr;
+	for (int i = 0; i < listPrv.size(); i++) {
+		if (listPrv[i] == pPrvDlg) {
+			delete listPrv[i];
+			listPrv.erase(listPrv.begin() + i);
+		}
 	}
-
 }
 
-void CClientDlg::demoPrivate(CString s)
+void CClientDlg::sendPrvMsgToServer(CString s)
 {
-	lstBoxChat.AddString(s);
-	pPrvChatDlg->lstBoxPrivateChat.AddString(s);
-	pPrvChatDlg->UpdateData(false);
+	mSend(s);
 }

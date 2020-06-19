@@ -190,7 +190,7 @@ LRESULT CServerDlg::SockMsg(WPARAM wParam, LPARAM lParam)
 			SockName* p = new SockName;
 			p->sockClient = accept(wParam, NULL, NULL);
 			pSock.push_back(p);
-			lst_event.AddString(_T("Connect Sucess"));
+			//lst_event.AddString(_T("Connect Sucess"));
 			UpdateData(FALSE);
 			break;
 		}
@@ -324,6 +324,25 @@ LRESULT CServerDlg::SockMsg(WPARAM wParam, LPARAM lParam)
 							mSend(pSock[i]->sockClient, command);
 						}
 					}
+					break;
+				}
+				case FLAG_CHAT_PRIVATE: {
+					// Dang: 6-receiver-message
+					string receiver = res[1];
+					string message = res[2];
+
+					CString temp;
+					temp = CString(pSock[pos]->Name.c_str()) + " to " + CString(receiver.c_str()) + " (privately): " + CString(message.c_str());
+					lst_event.AddString(temp);
+
+					for (int i = 0; i < pSock.size(); i++) {
+						if (receiver==pSock[i]->Name){
+							temp = _T("6\r\n") + CString(pSock[pos]->Name.c_str()) + _T("\r\n") + CString(message.c_str());
+							mSend(pSock[i]->sockClient, temp);
+							break;
+						}
+					}
+					UpdateData(FALSE);
 					break;
 				}
 			}
