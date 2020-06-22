@@ -573,7 +573,7 @@ void CClientDlg::OnBnClickedSend()
 		mSend(Command);
 		FILE* fp;
 		char path[260];
-		int len;
+		size_t len;
 		char* str;
 		fp = _wfopen(path_file, L"rb");
 		fstream inp(path_file, ios::in | ios::binary);
@@ -583,16 +583,28 @@ void CClientDlg::OnBnClickedSend()
 			getline(inp, s);
 			len = s.length() + 1;
 			len++;
+
 			str = new char[len] {0};
 			fgets(str, len, fp);
 			len--;
-			if (len != 0)
+
+			send(sClient, (char*)&len, sizeof(size_t), 0);
+			size_t sizeleft = len;
+			size_t sizerecv;
+			while (sizeleft > 0)
 			{
-				send(sClient, (char*)&len, sizeof(int), 0);
-				send(sClient, str, len, 0);
+				sizerecv = send(sClient, str, sizeleft, 0);
+				if (sizerecv == -1)
+				{
+					break;
+				}
+				sizeleft -= sizerecv;
+				str += sizerecv;
 			}
-			delete[] str;
 		}
+
+
+
 		bfile = false;
 		fclose(fp);
 		inp.close();

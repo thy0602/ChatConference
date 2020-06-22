@@ -353,11 +353,12 @@ LRESULT CServerDlg::SockMsg(WPARAM wParam, LPARAM lParam)
 					char* str = nullptr;
 					FILE* fp;
 					fp = _wfopen(res[1], L"wb");
-					int len = 0;
-					int x = 0;
-					while (recv(wParam, (char*)&len, sizeof(int), 0) > 0)
+					size_t len = 0;
+					size_t x = 0;
+					while (recv(wParam, (char*)&len, sizeof(size_t), 0) > 0)
 					{
 						str = new char[len] {0};
+
 						recv(wParam, str, len, 0);
 						for (x = 0; x < len; x++)
 							fprintf_s(fp, "%c", str[x]);
